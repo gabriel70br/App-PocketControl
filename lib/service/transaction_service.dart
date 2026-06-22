@@ -8,7 +8,8 @@ class TransactionService {
 
     if (user == null) return 0;
 
-    final response = await supabase
+    // 1. Transações normais (income / expense)
+    final transactions = await supabase
         .from('transactions')
         .select('amount, categories(type)')
         .eq('user_id', user.id);
@@ -16,7 +17,7 @@ class TransactionService {
     double income = 0;
     double expense = 0;
 
-    for (final item in response) {
+    for (final item in transactions) {
       final amount = (item['amount'] as num).toDouble();
       final type = item['categories']?['type'];
 
@@ -27,7 +28,50 @@ class TransactionService {
       }
     }
 
-    return income - expense;
+    // 2. Dinheiro enviado para metas
+    final goalTransfers = await supabase
+        .from('goal_transactions')
+        .select('amount')
+        .eq('user_id', user.id);
+
+    double goalsTotal = 0;
+
+    for (final item in goalTransfers) {
+      goalsTotal += (item['amount'] as num).toDouble();
+    }
+
+    // 3. Saldo final REAL
+    return income - expense - goalsTotal;
+  }
+
+  Future<void> addMoneyToGoal({
+    required String goalId,
+    required double amount,
+    required double currentSaved,
+  }) async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    final balance = await getBalance();
+
+    if (amount > balance) {
+      throw Exception("Saldo insuficiente");
+    }
+
+    await supabase.from('goal_transactions').insert({
+      'user_id': user.id,
+      'goal_id': goalId,
+      'amount': amount,
+    });
+
+    await supabase
+        .from('savings_goals')
+        .update({
+          'saved_amount': currentSaved + amount,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', goalId);
   }
 
   Future<List<Map<String, dynamic>>> getChartData() async {
@@ -160,5 +204,43 @@ class TransactionService {
       'amount': amount,
       'date': date.toIso8601String(),
     });
+  }
+
+  Future<List<Map<String, dynamic>>> getCategoryExpensesByPeriod({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return [];
+
+    final response = await supabase
+        .from('transactions')
+        .select('amount, date, categories(name, type)')
+        .eq('user_id', user.id)
+        .gte('date', start.toIso8601String())
+        .lte('date', end.toIso8601String());
+
+    final Map<String, double> categoryTotals = {};
+    double total = 0;
+
+    for (final item in response) {
+      final category = item['categories'];
+
+      if (category == null) continue;
+      if (category['type'] != 'expense') continue;
+
+      final name = category['name'];
+      final amount = (item['amount'] as num).toDouble();
+
+      total += amount;
+      categoryTotals[name] = (categoryTotals[name] ?? 0) + amount;
+    }
+
+    if (total == 0) return [];
+
+    return categoryTotals.entries.map((e) {
+      return {"name": e.key, "value": (e.value / total) * 100};
+    }).toList();
   }
 }

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:pocket_control/features/categoryExpenses/CategoryExpenses_page.dart';
+import 'package:pocket_control/features/savingsGoal/savingsGoal_page.dart';
 import '../transaction/transaction_page.dart';
 import '../filter/filter_page.dart';
 import '../profile/profile_page.dart';
 import '../../service/transaction_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../main.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -347,7 +351,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // CARDS (Receitas, Despesas, Sem)
+                // CARDS (Receitas, Despesas)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -367,6 +371,63 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 24),
 
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final updated = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SavingsGoalPage(),
+                        ),
+                      );
+
+                      if (updated == true) {
+                        await loadBalance();
+                      }
+                    },
+                    icon: const Icon(Icons.savings_outlined),
+                    label: const Text("Meta de Economia"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E88E5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CategoryExpensesPage(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.pie_chart_outline),
+                    label: const Text("Gastos por Categoria"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E88E5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
                 // HEADER DA LISTA
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
